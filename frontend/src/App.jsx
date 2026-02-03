@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { ethers } from "ethers";
 import { ABI, CONTRACT_ADDRESS } from "./contract";
 
+const SEPOLIA_RPC = "https://1rpc.io/sepolia";
+
 async function sha256File(file) {
   const buf = await file.arrayBuffer();
   const hash = await crypto.subtle.digest("SHA-256", buf);
@@ -17,23 +19,29 @@ export default function App() {
 
   const hasWallet = typeof window !== "undefined" && window.ethereum;
 
-  const provider = useMemo(() => {
+  // Read-only provider for queries (doesn't need MetaMask)
+  const readProvider = useMemo(() => {
+    return new ethers.JsonRpcProvider(SEPOLIA_RPC);
+  }, []);
+
+  // MetaMask provider for transactions
+  const walletProvider = useMemo(() => {
     if (!hasWallet) return null;
     return new ethers.BrowserProvider(window.ethereum);
   }, [hasWallet]);
 
   async function connect() {
-    if (!provider) return setStatus("MetaMask not found.");
-    await provider.send("eth_requestAccounts", []);
-    const signer = await provider.getSigner();
+    if (!walletProvider) return setStatus("MetaMask not found.");
+    await walletProvider.send("eth_requestAccounts", []);
+    const signer = await walletProvider.getSigner();
     const addr = await signer.getAddress();
     setAccount(addr);
     setStatus("Connected.");
   }
 
   async function issue(file) {
-    if (!provider) return setStatus("Connect MetaMask first.");
-    const signer = await provider.getSigner();
+    if (!walletProvider) return setStatus("Connect MetaMask first.");
+    const signer = await walletProvider.getSigner();
     const reg = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
     const h = await sha256File(file);
     setDocHash(h);
@@ -48,8 +56,8 @@ export default function App() {
   }
 
   async function revoke(file) {
-    if (!provider) return setStatus("Connect MetaMask first.");
-    const signer = await provider.getSigner();
+    if (!walletProvider) return setStatus("Connect MetaMask first.");
+    const signer = await walletProvider.getSigner();
     const reg = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
     const h = await sha256File(file);
     setDocHash(h);
@@ -64,38 +72,44 @@ export default function App() {
   }
 
   async function verify(file) {
-    if (!provider) return setStatus("Connect MetaMask first.");
-    const reg = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+    const reg = new ethers.Contract(CONTRACT_ADDRESS, ABI, readProvider);
     const h = await sha256File(file);
     setDocHash(h);
     setStatus("Checking chain…");
-    const res = await reg.verify(h);
-    setVerifyResult({
-      issued: res[0],
-      revoked: res[1],
-      issuedAt: Number(res[2]),
-      issuer: res[3],
-    });
-    setStatus("Done.");
+    try {
+      const res = await reg.verify(h);
+      setVerifyResult({
+        issued: res[0],
+        revoked: res[1],
+        issuedAt: Number(res[2]),
+        issuer: res[3],
+      });
+      setStatus("Done.");
+    } catch (err) {
+      setStatus("Error: " + (err.reason || err.message));
+    }
   }
 
   async function loadEvents() {
-    if (!provider) return setStatus("Connect MetaMask first.");
-    const reg = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+    const reg = new ethers.Contract(CONTRACT_ADDRESS, ABI, readProvider);
     setStatus("Loading recent events…");
-    const issued = await reg.queryFilter(reg.filters.Issued(), -5000);
-    const revoked = await reg.queryFilter(reg.filters.Revoked(), -5000);
-    const all = [...issued, ...revoked]
-      .sort((a, b) => (a.blockNumber - b.blockNumber))
-      .slice(-20)
-      .map(e => ({
-        name: e.fragment.name,
-        hash: e.args.docHash,
-        issuer: e.args.issuer,
-        block: e.blockNumber
-      }));
-    setEvents(all);
-    setStatus("Events loaded.");
+    try {
+      const issued = await reg.queryFilter(reg.filters.Issued(), -5000);
+      const revoked = await reg.queryFilter(reg.filters.Revoked(), -5000);
+      const all = [...issued, ...revoked]
+        .sort((a, b) => (a.blockNumber - b.blockNumber))
+        .slice(-20)
+        .map(e => ({
+          name: e.fragment.name,
+          hash: e.args.docHash,
+          issuer: e.args.issuer,
+          block: e.blockNumber
+        }));
+      setEvents(all);
+      setStatus("Events loaded.");
+    } catch (err) {
+      setStatus("Error: " + (err.reason || err.message));
+    }
   }
 
   return (
