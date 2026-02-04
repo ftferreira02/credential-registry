@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
 import { ethers } from "ethers";
-import axios from "axios"; // [NEW]
+import axios from "axios";
 import { ABI, CONTRACT_ADDRESS } from "./contract";
 
-// Use Tenderly public or Alchemy if configured
 const SEPOLIA_RPC = "https://gateway.tenderly.co/public/sepolia";
-const PINATA_JWT = import.meta.env.VITE_PINATA_JWT; // [NEW] Read from .env
+const PINATA_JWT = import.meta.env.VITE_PINATA_JWT;
 
 async function sha256File(file) {
   const buf = await file.arrayBuffer();
@@ -96,7 +95,7 @@ export default function App() {
     setStatus("Hashing file...");
     const fileHash = await sha256File(structFile);
 
-    // [NEW] Upload to IPFS
+    // Upload to IPFS
     setStatus("Uploading to IPFS (this may take a moment)...");
     let ipfsCid = "";
     try {
@@ -114,26 +113,24 @@ export default function App() {
       verifyingContract: CONTRACT_ADDRESS,
     };
 
-    // [UPDATED] Added ipfsCid
     const types = {
       Credential: [
         { name: "docHash", type: "bytes32" },
         { name: "studentName", type: "string" },
         { name: "course", type: "string" },
         { name: "issueDate", type: "uint64" },
-        { name: "ipfsCid", type: "string" }, // [NEW]
+        { name: "ipfsCid", type: "string" },
       ],
     };
 
     const issueDate = Math.floor(Date.now() / 1000); // Current unix timestamp
 
-    // [UPDATED] Added ipfsCid
     const value = {
       docHash: fileHash,
       studentName,
       course,
       issueDate,
-      ipfsCid, // [NEW]
+      ipfsCid,
     };
 
     setStatus("Requesting signature...");
@@ -181,14 +178,13 @@ export default function App() {
     setDocHash(h);
     setStatus("Checking chain…");
     try {
-      // [UPDATED] Verify returns extra param now
       const res = await reg.verify(h);
       setVerifyResult({
         issued: res[0],
         revoked: res[1],
         issuedAt: Number(res[2]),
         issuer: res[3],
-        ipfsCid: res[4], // [NEW]
+        ipfsCid: res[4],
       });
       setStatus("Done.");
     } catch (err) {
@@ -206,13 +202,13 @@ export default function App() {
 
       const all = [...issued, ...revoked]
         .sort((a, b) => (a.blockNumber - b.blockNumber)) // Newest last (log order) -> reverse for UI
-        .reverse() // [UPDATED] Show newest first
+        .reverse() // Show newest first
         .slice(0, 20)
         .map(e => ({
           name: e.fragment.name,
           hash: e.args.docHash,
           issuer: e.args.issuer,
-          cid: e.args[3], // [UPDATED] Index 3 is ipfsCid in Issued(hash, issuer, date, cid)
+          cid: e.args[3], // Index 3 is ipfsCid in Issued(hash, issuer, date, cid)
           block: e.blockNumber
         }));
 
@@ -251,8 +247,8 @@ export default function App() {
             <button
               onClick={connect}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${account
-                  ? "bg-zinc-800/50 border-emerald-500/30 text-emerald-400"
-                  : "bg-white text-zinc-900 border-white hover:bg-zinc-200"
+                ? "bg-zinc-800/50 border-emerald-500/30 text-emerald-400"
+                : "bg-white text-zinc-900 border-white hover:bg-zinc-200"
                 }`}
             >
               {account ? (
@@ -389,7 +385,7 @@ export default function App() {
                         <span className="text-zinc-300">{new Date(Number(verifyResult.issuedAt) * 1000).toLocaleDateString()}</span>
                       </div>
 
-                      {/* [NEW] IPFS Download Link */}
+                      {/* IPFS Download Link */}
                       {verifyResult.ipfsCid && verifyResult.ipfsCid.length > 5 && (
                         <div className="mt-4 pt-4 border-t border-white/5">
                           <a

@@ -2,7 +2,7 @@
 
 **CredVerify** is a decentralized application (dApp) for issuing and verifying academic or professional credentials on the Ethereum blockchain. It leverages **EIP-712** for secure, readable signing and **IPFS** for decentralized document storage, ensuring valuable certificates are immutable, verifiable, and permanently accessible.
 
-## 🚀 Features
+## Features
 
 -   **Tamper-Proof Issuance**: Credentials are hashed (SHA-256) and committed to the Sepolia testnet. Any modification to the document invalidates the verification.
 -   **Structured Signing (EIP-712)**: Issuers sign clear, typed data (Student Name, Course, Date) instead of opaque hex strings, preventing phishing attacks.
@@ -12,14 +12,14 @@
     -   **By Registry**: Public feed allows anyone to browse and download valid credentials directly from IPFS.
 -   **Role-Based Access**: Only authorized addresses (e.g., Universities) can issue or revoke credentials.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 -   **Blockchain**: Solidity (Smart Contracts), Hardhat (Dev Framework), Sepolia Testnet.
 -   **Frontend**: React (Vite), Tailwind CSS (Styling), Ethers.js v6 (Blockchain Interaction).
 -   **Storage**: IPFS (via Pinata API).
 -   **Standards**: EIP-712 (Typed Data Signing).
 
-## 📦 Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 -   Node.js (v18+)
@@ -63,12 +63,12 @@ cd frontend
 npm run dev
 ```
 
-## 📜 Smart Contract Architecture
+## Smart Contract Architecture
 
 The core logic resides in `CredentialRegistry.sol`.
 -   **`issueWithSignature`**: Recover's the signer address from the EIP-712 signature and stores the document hash + IPFS CID.
 -   **`verify`**: Returns the issuance status, timestamp, issuer address, and IPFS link.
 -   **`revoke`**: Allows issuers to invalidate a credential (e.g., issued in error).
 
-## 📄 License
+## License
 MIT
